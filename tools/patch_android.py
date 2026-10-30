@@ -14,4 +14,22 @@ g = ROOT / "build.gradle.kts"
 gs = g.read_text(encoding="utf-8")
 gs = re.sub(r"compileSdk = [^\n]+", "compileSdk = 36", gs, count=1)
 g.write_text(gs, encoding="utf-8")
+# Плагины, собранные под старый compileSdk (file_picker), поднимаем до 36.
+root = pathlib.Path("android/build.gradle.kts")
+rs = root.read_text(encoding="utf-8")
+if "compileSdkVersion" not in rs:
+    rs = """subprojects {
+    afterEvaluate {
+        val ext = extensions.findByName("android")
+        if (ext != null) {
+            try {
+                ext.javaClass.getMethod("compileSdkVersion", Int::class.javaPrimitiveType).invoke(ext, 36)
+            } catch (e: Exception) {
+            }
+        }
+    }
+}
+
+""" + rs
+    root.write_text(rs, encoding="utf-8")
 print("patched")

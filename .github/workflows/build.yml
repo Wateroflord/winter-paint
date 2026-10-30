@@ -66,7 +66,7 @@ jobs:
           rm -rf test
           python tools/patch_windows.py
           flutter pub get
-          dart run flutter_launcher_icons || true
+          dart run flutter_launcher_icons -f icons_windows.yaml || true
           sed -i 's/L"winter_paint"/L"Winter Paint"/' windows/runner/main.cpp || true
       - name: Build Windows app
         shell: bash

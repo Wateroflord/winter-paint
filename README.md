@@ -1,3 +1,13 @@
 # Winter Paint
 
-Приложение семейства Winter Hub (Android + Windows). Скачать: Releases или через Winter Hub.
+Холст с кистями, слоями и нажимом пера, плюс редактор пиксель-арта: палитра, заливка, линии, зеркало, кадры анимации с луковой кожурой, экспорт в PNG, спрайт-лист и GIF.
+
+## Установка
+
+Приложение семейства **Winter Hub** (Android + Windows). Удобнее всего ставить и обновлять через Winter Hub, либо скачать файл из раздела **Releases**: `Winter-Paint.apk` для телефона, `Winter-Paint-Setup.exe` для ПК.
+
+## Как устроено
+
+Flutter (Dart). lib/canvas_editor.dart — холст, lib/pixel.dart — пиксель-арт, lib/store.dart — проекты.
+
+Сборку делает GitHub Actions при каждом изменении в `main`: анализ кода, тесты (`test/`), сборка APK и установщика для Windows, подпись постоянным ключом (общие скрипты в `winter-hub/ci`) и публикация в Releases.

@@ -64,5 +64,44 @@ class Projects {
     } catch (_) {}
   }
 
+  /// Все рисунки одним файлом (JSON, содержимое файлов в base64).
+  static Future<String> exportAll() async {
+    final out = <Map<String, dynamic>>[];
+    await for (final e in (await root()).list()) {
+      if (e is! Directory) continue;
+      final files = <String, String>{};
+      await for (final f in e.list()) {
+        if (f is File) files[f.uri.pathSegments.last] = base64Encode(await f.readAsBytes());
+      }
+      if (files.containsKey('meta.json')) out.add({'id': e.uri.pathSegments.where((s) => s.isNotEmpty).last, 'files': files});
+    }
+    return jsonEncode({'app': 'winter-paint', 'version': 1, 'projects': out});
+  }
+
+  /// Восстановить рисунки из копии. Уже существующие не трогаем. Возвращает число добавленных.
+  static Future<int> importAll(String raw) async {
+    final Object? j;
+    try {
+      j = jsonDecode(raw.trim());
+    } catch (_) {
+      throw const FormatException('Это не файл резервной копии');
+    }
+    if (j is! Map || j['app'] != 'winter-paint') throw const FormatException('Это не копия Winter Paint');
+    final existing = {for (final m in await list()) m.id};
+    var n = 0;
+    for (final p in (j['projects'] as List? ?? const [])) {
+      if (p is! Map || p['files'] is! Map) continue;
+      final id = '${p['id']}'.replaceAll(RegExp(r'[^0-9A-Za-z_-]'), '');
+      if (id.isEmpty || existing.contains(id)) continue;
+      final files = (p['files'] as Map).map((k, v) => MapEntry('$k'.replaceAll(RegExp(r'[/\\]'), ''), '$v'));
+      if (!files.containsKey('meta.json')) continue;
+      for (final e in files.entries) {
+        await writeBytes(id, e.key, base64Decode(e.value));
+      }
+      n++;
+    }
+    return n;
+  }
+
   static String newId() => DateTime.now().microsecondsSinceEpoch.toString();
 }

@@ -3,14 +3,18 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import 'backup_io.dart';
 import 'canvas_editor.dart';
 import 'pixel.dart';
 import 'store.dart';
 import 'ui.dart';
+import 'package:winter_core/winter_core.dart';
 
-void main() {
+void main() => runWinterApp(repo: 'winter-paint', appName: 'Winter Paint', body: _main);
+
+void _main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const PaintApp());
+  runApp(WinterCrashBanner(child: const PaintApp()));
 }
 
 class PaintApp extends StatelessWidget {
@@ -48,6 +52,31 @@ class _HomeState extends State<Home> {
       thumbs[p.id] = await Projects.readBytes(p.id, 'thumb.png');
     }
     if (mounted) setState(() {});
+  }
+
+  void _snack(String t) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t)));
+
+  Future<void> _backup() async {
+    try {
+      final path = await BackupIO.save('winter-paint-${BackupIO.stamp()}.json', await Projects.exportAll());
+      if (path != null && mounted) _snack('Копия сохранена — рисунков: ${projects.length}');
+    } catch (e) {
+      if (mounted) _snack('Не удалось сохранить: $e');
+    }
+  }
+
+  Future<void> _restore() async {
+    try {
+      final text = await BackupIO.open();
+      if (text == null) return;
+      final n = await Projects.importAll(text);
+      await _reload();
+      if (mounted) _snack(n == 0 ? 'Новых рисунков в копии нет' : 'Восстановлено рисунков: $n');
+    } on FormatException catch (e) {
+      if (mounted) _snack(e.message);
+    } catch (e) {
+      if (mounted) _snack('Не удалось восстановить: $e');
+    }
   }
 
   Future<void> _open(ProjectMeta m) async {
@@ -121,7 +150,18 @@ class _HomeState extends State<Home> {
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                const Text('Winter Paint', style: W.h1),
+                Row(children: [
+                  const Expanded(child: Text('Winter Paint', style: W.h1)),
+                  PopupMenuButton<String>(
+                    tooltip: 'Резервная копия',
+                    icon: const Icon(Icons.more_vert),
+                    onSelected: (v) => v == 'save' ? _backup() : _restore(),
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'save', child: Text('Сохранить все рисунки в файл')),
+                      PopupMenuItem(value: 'restore', child: Text('Восстановить из файла')),
+                    ],
+                  ),
+                ]),
                 const Text('Рисуй кистями или создавай пиксельные спрайты с анимацией', style: W.small),
                 const SizedBox(height: 16),
                 Row(children: [
